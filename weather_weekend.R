@@ -11,24 +11,32 @@ source("R/arrival_times.R")
 # ── Config ────────────────────────────────────────────────────────────────────
 
 # EuroVelo 6 — Vienna to Budapest (route order)
-cities     <- c("Vienna", "Bratislava", "Győr", "Komárom",
-                "Esztergom", "Visegrád", "Szentendre", "Budapest")
+cities <- data.table(
+  name    = c("Vienna", "Bratislava", "Győr", "Komárom",
+              "Esztergom", "Visegrád", "Szentendre", "Budapest"),
+  country = c("AT", "SK", "HU", "HU", "HU", "HU", "HU", "HU")
+)
 start_hour <- 6L    # departure from Vienna (local time)
 speed_kmh  <- 25    # average cycling speed incl. breaks
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
 
 message("Geocoding cities...")
-locs <- rbindlist(lapply(cities, geocode))
+locs <- rbindlist(lapply(seq_len(nrow(cities)), function(i)
+  geocode(cities$name[i], cities$country[i])))
 
-weekend    <- next_weekend()
-start_time <- as.POSIXct(
-  sprintf("%s %02d:00:00", format(weekend[1], "%Y-%m-%d"), start_hour),
-  tz = "Europe/Vienna"
-)
+weekend <- next_weekend()
 
 message("Calculating arrival times...")
-arrivals <- arrival_times(locs, start_time, speed_kmh)
+arrivals <- rbindlist(lapply(weekend, function(day) {
+  start_time <- as.POSIXct(
+    sprintf("%s %02d:00:00", format(day, "%Y-%m-%d"), start_hour),
+    tz = "Europe/Vienna"
+  )
+  dt <- arrival_times(locs, start_time, speed_kmh)
+  dt[, day := weekdays(day)]
+  dt
+}))
 
 message("Fetching hourly forecasts...")
 forecasts <- rbindlist(lapply(seq_len(nrow(locs)), function(i)
@@ -37,21 +45,22 @@ forecasts <- rbindlist(lapply(seq_len(nrow(locs)), function(i)
 
 # ── Match forecast to arrival hour ────────────────────────────────────────────
 
-arrivals[,  arrival_hour := round(arrival, "hours")]
-forecasts[, time_hour    := round(time,    "hours")]
+arrivals[,  hour_key := format(round(arrival, "hours"), "%Y-%m-%d %H")]
+forecasts[, hour_key := format(time, "%Y-%m-%d %H")]
 
 result <- merge(
-  arrivals[, .(city, dist_cum_km, arrival, arrival_hour)],
-  forecasts,
-  by.x = c("city", "arrival_hour"),
-  by.y = c("city", "time_hour")
+  arrivals[, .(city, day, dist_cum_km, arrival, hour_key)],
+  forecasts[, .(city, hour_key, temp, rain_pct, wind_kmh, wind_dir)],
+  by = c("city", "hour_key")
 )
 
-# Restore route order
-result[, city := factor(city, levels = cities)]
-setorder(result, city)
+# Restore route and day order
+result[, city := factor(city, levels = cities$name)]
+result[, day  := factor(day,  levels = weekdays(weekend))]
+setorder(result, day, city)
 
 display <- result[, .(
+  Day         = day,
   City        = city,
   `Arrival`   = format(arrival, "%H:%M"),
   `km`        = round(dist_cum_km),
@@ -64,12 +73,13 @@ display <- result[, .(
 # ── Render table ──────────────────────────────────────────────────────────────
 
 display |>
-  gt() |>
+  gt(groupname_col = "Day") |>
   tab_header(
     title    = "EuroVelo 6 — Cycling Weather Forecast",
     subtitle = sprintf(
-      "Vienna → Budapest  |  %s  |  Start %02d:00, %.0f km/h avg",
-      format(weekend[1], "%d %b %Y"), start_hour, speed_kmh
+      "Vienna → Budapest  |  %s – %s  |  Start %02d:00, %.0f km/h avg",
+      format(weekend[1], "%d %b %Y"), format(weekend[2], "%d %b %Y"),
+      start_hour, speed_kmh
     )
   ) |>
   cols_align("left",   columns = City) |>
