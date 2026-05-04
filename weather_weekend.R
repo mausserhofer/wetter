@@ -4,70 +4,81 @@ pacman::p_load(httr2, data.table, gt)
 source("R/geocode.R")
 source("R/fetch_forecast.R")
 source("R/next_weekend.R")
+source("R/deg_to_compass.R")
+source("R/haversine.R")
+source("R/arrival_times.R")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
 # EuroVelo 6 — Vienna to Budapest (route order)
-cities <- c(
-  "Vienna",
-  "Bratislava",
-  "Győr",
-  "Komárom",
-  "Esztergom",
-  "Visegrád",
-  "Szentendre",
-  "Budapest"
-)
+cities     <- c("Vienna", "Bratislava", "Győr", "Komárom",
+                "Esztergom", "Visegrád", "Szentendre", "Budapest")
+start_hour <- 6L    # departure from Vienna (local time)
+speed_kmh  <- 25    # average cycling speed incl. breaks
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
 
 message("Geocoding cities...")
 locs <- rbindlist(lapply(cities, geocode))
 
-message("Fetching forecasts...")
+weekend    <- next_weekend()
+start_time <- as.POSIXct(
+  sprintf("%s %02d:00:00", format(weekend[1], "%Y-%m-%d"), start_hour),
+  tz = "Europe/Vienna"
+)
+
+message("Calculating arrival times...")
+arrivals <- arrival_times(locs, start_time, speed_kmh)
+
+message("Fetching hourly forecasts...")
 forecasts <- rbindlist(lapply(seq_len(nrow(locs)), function(i)
   fetch_forecast(locs$city[i], locs$lat[i], locs$lon[i])
 ))
 
-# ── Filter & reshape ──────────────────────────────────────────────────────────
+# ── Match forecast to arrival hour ────────────────────────────────────────────
 
-weekend <- next_weekend()
-result  <- forecasts[date %in% weekend]
+arrivals[,  arrival_hour := round(arrival, "hours")]
+forecasts[, time_hour    := round(time,    "hours")]
 
-# Preserve route order
+result <- merge(
+  arrivals[, .(city, dist_cum_km, arrival, arrival_hour)],
+  forecasts,
+  by.x = c("city", "arrival_hour"),
+  by.y = c("city", "time_hour")
+)
+
+# Restore route order
 result[, city := factor(city, levels = cities)]
-result[, day  := weekdays(date)]
-setorder(result, date, city)
+setorder(result, city)
 
 display <- result[, .(
   City        = city,
-  Day         = day,
-  Date        = date,
-  `Max °C`    = temp_max,
-  `Min °C`    = temp_min,
+  `Arrival`   = format(arrival, "%H:%M"),
+  `km`        = round(dist_cum_km),
+  `Temp °C`   = temp,
   `Rain %`    = rain_pct,
-  `Wind km/h` = wind_kmh
+  `Wind km/h` = wind_kmh,
+  `Dir`       = deg_to_compass(wind_dir)
 )]
 
 # ── Render table ──────────────────────────────────────────────────────────────
 
 display |>
-  gt(groupname_col = "Day") |>
+  gt() |>
   tab_header(
-    title    = "EuroVelo 6 — Weekend Weather Forecast",
+    title    = "EuroVelo 6 — Cycling Weather Forecast",
     subtitle = sprintf(
-      "Vienna → Budapest  |  %s – %s",
-      format(weekend[1], "%d %b %Y"),
-      format(weekend[2], "%d %b %Y")
+      "Vienna → Budapest  |  %s  |  Start %02d:00, %.0f km/h avg",
+      format(weekend[1], "%d %b %Y"), start_hour, speed_kmh
     )
   ) |>
-  cols_hide(Date) |>
   cols_align("left",   columns = City) |>
-  cols_align("center", columns = c(`Max °C`, `Min °C`, `Rain %`, `Wind km/h`)) |>
-  fmt_number(columns  = c(`Max °C`, `Min °C`, `Wind km/h`), decimals = 1) |>
-  fmt_integer(columns = `Rain %`) |>
+  cols_align("center", columns = c(Arrival, km, `Temp °C`, `Rain %`, `Wind km/h`, Dir)) |>
+  cols_label(km = "km from start") |>
+  fmt_number(columns  = c(`Temp °C`, `Wind km/h`), decimals = 1) |>
+  fmt_integer(columns = c(`Rain %`, km)) |>
   data_color(
-    columns = `Max °C`,
+    columns = `Temp °C`,
     palette = c("#ffffcc", "#fd8d3c", "#bd0026")
   ) |>
   data_color(
@@ -78,10 +89,6 @@ display |>
   data_color(
     columns = `Wind km/h`,
     palette = c("white", "#a8ddb5", "#0868ac")
-  ) |>
-  tab_style(
-    style     = cell_text(weight = "bold"),
-    locations = cells_row_groups()
   ) |>
   tab_options(
     heading.align             = "left",
