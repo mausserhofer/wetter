@@ -1,10 +1,8 @@
-if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
 pacman::p_load(httr2, data.table, gt)
 
 invisible(lapply(list.files("R", full.names = TRUE), source))
 
 # ── Config ────────────────────────────────────────────────────────────────────
-
 cities <- data.table(
   name = c(
     # Munich → Passau (Isar river route)
@@ -29,7 +27,7 @@ cities <- data.table(
   )
 )
 start_city  <- "Vienna"
-end_city    <- "Munich"
+end_city    <- "Budapest"
 start_hour  <- 6L    # departure used for the detailed forecast table
 start_hours <- 5:10  # range explored in the departure-time optimisation
 speed_kmh   <- 25    # average cycling speed incl. breaks
@@ -39,7 +37,7 @@ speed_kmh   <- 25    # average cycling speed incl. breaks
 route     <- cities[seq(which(cities$name == start_city),
                         which(cities$name == end_city))]
 locs      <- get_coordinates(route)
-weekend   <- next_weekend()
+weekend   <- c(as.Date("2026-05-14"), as.Date("2026-05-15"), next_weekend())
 forecasts <- get_forecasts(locs, weekend)
 result    <- build_result(locs, forecasts, weekend, start_hour, speed_kmh)
 
