@@ -9,7 +9,7 @@ render_opt_table <- function(locs, forecasts, weekend, start_hours, speed_kmh) {
       hour_keys <- format(arr$arrival + 1800L, "%Y-%m-%d %H")
       matched   <- merge(
         merge(data.table(city = arr$city, hour_key = hour_keys),
-              forecasts[, .(city, hour_key, wind_kmh, wind_dir, temp)],
+              forecasts[, .(city, hour_key, wind_kmh, wind_dir, temp, rain_mm)],
               by = c("city", "hour_key")),
         locs[, .(city, segment_bearing)],
         by = "city"
@@ -19,7 +19,8 @@ render_opt_table <- function(locs, forecasts, weekend, start_hours, speed_kmh) {
         start_hour = sprintf("%02d:00", h),
         avg_score  = round(mean(
           wind_score(matched$wind_kmh, matched$wind_dir, matched$segment_bearing) +
-          temp_score(matched$temp)
+          temp_score(matched$temp) +
+          rain_score(matched$rain_mm)
         ), 1)
       )
     }))
@@ -35,6 +36,6 @@ render_opt_table <- function(locs, forecasts, weekend, start_hours, speed_kmh) {
                subtitle = sprintf("%s  |  %.0f km/h avg", route, speed_kmh)) |>
     cols_align("center", columns = everything()) |>
     fmt_number(columns = everything(), decimals = 1) |>
-    data_color(columns = everything(), palette = c("#d73027", "white", "#1a9850")) |>
+    data_color(columns = everything(), domain = c(-10, 10), palette = c("#d73027", "white", "#1a9850")) |>
     tab_options(heading.align = "left", column_labels.font.weight = "bold")
 }

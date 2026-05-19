@@ -1,4 +1,4 @@
-pacman::p_load(httr2, data.table, gt)
+pacman::p_load(httr2, data.table, gt, webshot2)
 
 invisible(lapply(list.files("R", full.names = TRUE), source))
 
@@ -37,9 +37,15 @@ speed_kmh   <- 25    # average cycling speed incl. breaks
 route     <- cities[seq(which(cities$name == start_city),
                         which(cities$name == end_city))]
 locs      <- get_coordinates(route)
-weekend   <- c(as.Date("2026-05-14"), as.Date("2026-05-15"), next_weekend())
+weekend   <- c(next_weekend())
 forecasts <- get_forecasts(locs, weekend)
-result    <- build_result(locs, forecasts, weekend, start_hour, speed_kmh)
 
-render_forecast_table(result, weekend, start_hour, speed_kmh)
-render_opt_table(locs, forecasts, weekend, start_hours, speed_kmh)
+date_tag  <- format(weekend[3], "%Y-%m-%d")
+
+render_opt_table(locs, forecasts, weekend, start_hours, speed_kmh) |>
+  gtsave(sprintf("options.png", date_tag))
+
+result    <- build_result(locs, forecasts, weekend[3], start_hour, speed_kmh)
+render_forecast_table(result, weekend[3], start_hour, speed_kmh) |>
+  gtsave(sprintf("forecasts.png", date_tag))
+

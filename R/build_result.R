@@ -12,7 +12,7 @@ build_result <- function(locs, forecasts, weekend, start_hour, speed_kmh) {
   result <- merge(
     merge(
       arrivals[, .(city, day, dist_cum_km, arrival, hour_key)],
-      forecasts[, .(city, hour_key, temp, rain_pct, wind_kmh, wind_dir)],
+      forecasts[, .(city, hour_key, temp, rain_pct, rain_mm, wind_kmh, wind_dir)],
       by = c("city", "hour_key")
     ),
     locs[, .(city, segment_bearing)],
@@ -30,10 +30,12 @@ build_result <- function(locs, forecasts, weekend, start_hour, speed_kmh) {
     km           = round(dist_cum_km),
     `Temp °C`    = temp,
     `Rain %`     = rain_pct,
+    `Rain mm/h`  = rain_mm,
     `Wind km/h`  = wind_kmh,
     Dir          = deg_to_compass(wind_dir),
     `Wind Score` = wind_score(wind_kmh, wind_dir, segment_bearing),
     `Temp Score` = temp_score(temp),
-    Score        = wind_score(wind_kmh, wind_dir, segment_bearing) + temp_score(temp)
+    `Rain Score` = rain_score(rain_mm),
+    Score        = wind_score(wind_kmh, wind_dir, segment_bearing) + temp_score(temp) + rain_score(rain_mm)
   )]
 }

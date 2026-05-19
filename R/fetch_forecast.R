@@ -4,7 +4,7 @@ fetch_forecast <- function(city, lat, lon, dates) {
       latitude   = lat,
       longitude  = lon,
       hourly     = paste(
-        "temperature_2m", "precipitation_probability",
+        "temperature_2m", "precipitation_probability", "precipitation",
         "windspeed_10m", "winddirection_10m",
         sep = ","
       ),
@@ -21,6 +21,7 @@ fetch_forecast <- function(city, lat, lon, dates) {
                           tz = "Europe/Vienna"),
     temp     = as.numeric(unlist(h$temperature_2m)),
     rain_pct = as.integer(unlist(h$precipitation_probability)),
+    rain_mm  = as.numeric(unlist(h$precipitation)),
     wind_kmh = as.numeric(unlist(h$windspeed_10m)),
     wind_dir = as.numeric(unlist(h$winddirection_10m))
   )
