@@ -35,3 +35,16 @@ jobs:
           path: |
             options.png
             forecasts.png
+
+            - name: Send email with plots
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Daily R Script Results"
+          to: markus.ausserhofer@hotmail.com
+          from: ${{ secrets.GMAIL_USER }}
+          body: "Your daily R script has completed. Plots attached!"
+          attachments: "*.png"
