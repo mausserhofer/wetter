@@ -24,9 +24,11 @@ render_forecast_table <- function(result, weekend, start_hour, speed_kmh) {
     data_color(columns = `Rain mm/h`, domain  = c(0, 10),
                                       palette = c("white", "#4a90d9")) |>
     data_color(columns = `Wind km/h`, palette = c("white", "#a8ddb5", "#0868ac")) |>
-    data_color(columns = `Wind Score`, palette = c("#d73027", "white", "#1a9850")) |>
-    data_color(columns = `Temp Score`, palette = c("#d73027", "white", "#1a9850")) |>
-    data_color(columns = Score,        palette = c("#d73027", "white", "#1a9850")) |>
+    data_color(columns = c(`Wind Score`, `Temp Score`, Score),
+               fn = function(x) scales::col_numeric(
+                 palette = c("#d73027", "white", "#1a9850"),
+                 domain  = c(-10, 10)
+               )(pmax(-10, pmin(10, x)))) |>
     summary_rows(
       groups  = everything(),
       columns = c(`Wind Score`, `Temp Score`, `Rain Score`, Score),

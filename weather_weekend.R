@@ -51,8 +51,8 @@ locs_back[, segment_bearing := c(
 render_opt_table(locs_back, forecasts, weekend, start_hours, speed_kmh) |>
   gtsave("options_back.png")
 
-result    <- build_result(locs, forecasts, weekend[3], start_hour, speed_kmh)
-render_forecast_table(result, weekend[3], start_hour, speed_kmh) |>
+result    <- build_result(locs, forecasts, weekend, start_hour, speed_kmh)
+render_forecast_table(result, weekend, start_hour, speed_kmh) |>
   gtsave("forecasts.png")
 
 b64 <- function(f) base64encode(f)

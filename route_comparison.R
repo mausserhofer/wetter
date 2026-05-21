@@ -84,5 +84,9 @@ dcast(scores, route ~ day, value.var = "avg_score") |>
   ) |>
   cols_align("center", columns = everything()) |>
   fmt_number(columns = everything(), decimals = 1) |>
-  data_color(columns = everything(), palette = c("#d73027", "white", "#1a9850")) |>
+  data_color(columns = everything(),
+             fn = function(x) scales::col_numeric(
+               palette = c("#d73027", "white", "#1a9850"),
+               domain  = c(-10, 10)
+             )(pmax(-10, pmin(10, x)))) |>
   tab_options(heading.align = "left", column_labels.font.weight = "bold")
