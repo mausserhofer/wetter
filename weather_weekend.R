@@ -40,12 +40,10 @@ locs      <- get_coordinates(route)
 weekend   <- c(next_weekend())
 forecasts <- get_forecasts(locs, weekend)
 
-date_tag  <- format(weekend[3], "%Y-%m-%d")
-
 render_opt_table(locs, forecasts, weekend, start_hours, speed_kmh) |>
-  gtsave(sprintf("options.png", date_tag))
+  gtsave("options.png")
 
 result    <- build_result(locs, forecasts, weekend[3], start_hour, speed_kmh)
 render_forecast_table(result, weekend[3], start_hour, speed_kmh) |>
-  gtsave(sprintf("forecasts.png", date_tag))
+  gtsave("forecasts.png")
 
