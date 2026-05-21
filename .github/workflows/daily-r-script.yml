@@ -22,7 +22,7 @@ jobs:
       - name: Install R packages
         run: |
           install.packages("pacman")
-          pacman::p_load(httr2, data.table, gt, webshot2, base64enc)
+          pacman::p_load(httr2, data.table, gt, webshot2, base64enc, scales)
         shell: Rscript {0}
 
       - name: Run R script

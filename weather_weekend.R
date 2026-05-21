@@ -1,4 +1,4 @@
-pacman::p_load(httr2, data.table, gt, webshot2, base64enc)
+pacman::p_load(httr2, data.table, gt, webshot2, base64enc, scales)
 
 invisible(lapply(list.files("R", full.names = TRUE), source))
 

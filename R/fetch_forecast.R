@@ -15,15 +15,18 @@ fetch_forecast <- function(city, lat, lon, dates) {
     req_perform()
 
   h <- resp_body_json(resp)$hourly
+  times <- as.POSIXct(unlist(h$time), format = "%Y-%m-%dT%H:%M",
+                      tz = "Europe/Vienna")
+  n <- length(times)
+  pad <- function(x, FUN = as.numeric) { v <- FUN(unlist(x)); length(v) <- n; v }
   dt <- data.table(
     city     = city,
-    time     = as.POSIXct(unlist(h$time), format = "%Y-%m-%dT%H:%M",
-                          tz = "Europe/Vienna"),
-    temp     = as.numeric(unlist(h$temperature_2m)),
-    rain_pct = as.integer(unlist(h$precipitation_probability)),
-    rain_mm  = as.numeric(unlist(h$precipitation)),
-    wind_kmh = as.numeric(unlist(h$windspeed_10m)),
-    wind_dir = as.numeric(unlist(h$winddirection_10m))
+    time     = times,
+    temp     = pad(h$temperature_2m),
+    rain_pct = pad(h$precipitation_probability, as.integer),
+    rain_mm  = pad(h$precipitation),
+    wind_kmh = pad(h$windspeed_10m),
+    wind_dir = pad(h$winddirection_10m)
   )
   dt[as.Date(time, tz = "Europe/Vienna") %in% dates]
 }

@@ -36,6 +36,10 @@ render_opt_table <- function(locs, forecasts, weekend, start_hours, speed_kmh) {
                subtitle = sprintf("%s  |  %.0f km/h avg", route, speed_kmh)) |>
     cols_align("center", columns = everything()) |>
     fmt_number(columns = everything(), decimals = 1) |>
-    data_color(columns = everything(), domain = c(-10, 10), palette = c("#d73027", "white", "#1a9850")) |>
+    data_color(columns = everything(),
+               fn = function(x) scales::col_numeric(
+                 palette = c("#d73027", "white", "#1a9850"),
+                 domain  = c(-10, 10)
+               )(pmax(-10, pmin(10, x)))) |>
     tab_options(heading.align = "left", column_labels.font.weight = "bold")
 }
