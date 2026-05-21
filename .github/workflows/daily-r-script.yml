@@ -50,7 +50,7 @@ jobs:
           msg = MIMEMultipart('alternative')
           msg['Subject'] = 'Weekend Cycling Forecast'
           msg['From'] = os.environ['GMAIL_USER']
-          msg['To'] = 'markus.ausserhofer@hotmail.com'
+          msg['To'] = 'markus.ausserhofer@hotmail.com, gabsmonthi3@gmail.com'
 
           with open('email_body.html') as f:
               html = f.read()
