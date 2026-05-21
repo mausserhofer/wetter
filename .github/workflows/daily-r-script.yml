@@ -22,7 +22,7 @@ jobs:
       - name: Install R packages
         run: |
           install.packages("pacman")
-          pacman::p_load(httr2, data.table, gt, webshot2)
+          pacman::p_load(httr2, data.table, gt, webshot2, base64enc)
         shell: Rscript {0}
 
       - name: Run R script
@@ -34,17 +34,29 @@ jobs:
           name: forecast-images
           path: |
             options.png
+            options_back.png
             forecasts.png
 
-      - name: Send email with plots
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.GMAIL_USER }}
-          password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "Daily R Script Results"
-          to: markus.ausserhofer@hotmail.com
-          from: ${{ secrets.GMAIL_USER }}
-          body: "Your daily R script has completed. Plots attached!"
-          attachments: "*.png"
+      - name: Send email
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          python3 - <<'EOF'
+          import smtplib, os
+          from email.mime.multipart import MIMEMultipart
+          from email.mime.text import MIMEText
+
+          msg = MIMEMultipart('alternative')
+          msg['Subject'] = 'Weekend Cycling Forecast'
+          msg['From'] = os.environ['GMAIL_USER']
+          msg['To'] = 'markus.ausserhofer@hotmail.com'
+
+          with open('email_body.html') as f:
+              html = f.read()
+          msg.attach(MIMEText(html, 'html'))
+
+          with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+              s.login(os.environ['GMAIL_USER'], os.environ['GMAIL_PASSWORD'])
+              s.send_message(msg)
+          EOF

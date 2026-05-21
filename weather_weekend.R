@@ -1,4 +1,4 @@
-pacman::p_load(httr2, data.table, gt, webshot2)
+pacman::p_load(httr2, data.table, gt, webshot2, base64enc)
 
 invisible(lapply(list.files("R", full.names = TRUE), source))
 
@@ -33,7 +33,6 @@ start_hours <- 5:10  # range explored in the departure-time optimisation
 speed_kmh   <- 25    # average cycling speed incl. breaks
 
 # ── Run ───────────────────────────────────────────────────────────────────────
-
 route     <- cities[seq(which(cities$name == start_city),
                         which(cities$name == end_city))]
 locs      <- get_coordinates(route)
@@ -43,7 +42,25 @@ forecasts <- get_forecasts(locs, weekend)
 render_opt_table(locs, forecasts, weekend, start_hours, speed_kmh) |>
   gtsave("options.png")
 
+locs_back <- locs[.N:1]
+locs_back[, segment_bearing := c(
+  bearing_deg(lat[-.N], lon[-.N], lat[-1], lon[-1]),
+  bearing_deg(lat[.N - 1L], lon[.N - 1L], lat[.N], lon[.N])
+)]
+
+render_opt_table(locs_back, forecasts, weekend, start_hours, speed_kmh) |>
+  gtsave("options_back.png")
+
 result    <- build_result(locs, forecasts, weekend[3], start_hour, speed_kmh)
 render_forecast_table(result, weekend[3], start_hour, speed_kmh) |>
   gtsave("forecasts.png")
+
+b64 <- function(f) base64encode(f)
+template <- paste(readLines("email_template.html", warn = FALSE), collapse = "\n")
+body <- gsub("\\{opt_fwd\\}",       b64("options.png"),      template)
+body <- gsub("\\{opt_back\\}",      b64("options_back.png"), body)
+body <- gsub("\\{forecasts\\}",     b64("forecasts.png"),    body)
+body <- gsub("\\{date_label\\}",    format(weekend[1], "%B %d, %Y"), body)
+body <- gsub("\\{date_generated\\}", format(Sys.time(), "%Y-%m-%d %H:%M UTC"), body)
+writeLines(body, "email_body.html")
 
